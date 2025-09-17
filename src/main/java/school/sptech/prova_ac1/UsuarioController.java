@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -62,20 +63,30 @@ public class UsuarioController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
-    @GetMapping("/buscar-por-nascimento")
+    @GetMapping("/filtro-data")
     public ResponseEntity<List<Usuario>> buscarPorDataNascimento(@RequestParam LocalDate nascimento) {
         List<Usuario> usuarios = usuarioRepository.findByDataNascimentoAfter(nascimento);
 
         if (usuarios.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         }
-        return ResponseEntity.status(HttpStatus.OK).body(usuarios);
+        return ResponseEntity.ok(usuarios);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Usuario> atualizar(@PathVariable Integer id, @RequestBody Usuario usuario) {
         if (!usuarioRepository.existsById(id)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+        }
+
+        Optional<Usuario> usuarioPorEmail = usuarioRepository.findByEmail(usuario.getEmail());
+        if (usuarioPorEmail.isPresent() && !usuarioPorEmail.get().getId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        Optional<Usuario> usuarioPorCpf = usuarioRepository.findByCpf(usuario.getCpf());
+        if (usuarioPorCpf.isPresent() && !usuarioPorCpf.get().getId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 
         usuario.setId(id);
